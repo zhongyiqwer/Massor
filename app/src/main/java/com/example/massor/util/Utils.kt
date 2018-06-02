@@ -1,9 +1,11 @@
 package com.example.massor.util
 
+import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.support.v7.app.AlertDialog
 import android.view.View
 import android.widget.Toast
+import com.clj.fastble.BleManager
 import com.example.massor.R
 import com.example.massor.dialog.progreseDialog
 

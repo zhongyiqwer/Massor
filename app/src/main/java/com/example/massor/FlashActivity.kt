@@ -57,9 +57,8 @@ class FlashActivity :AppCompatActivity(){
                 startActivity(intent)
                 finish()
             }else{
-                startActivity(intent)
-                finish()
                 Utils.showToast(this,"不开启位置权限可能导致蓝牙不可用")
+                finish()
             }
         }
     }

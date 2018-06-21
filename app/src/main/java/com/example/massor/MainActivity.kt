@@ -15,6 +15,7 @@ import com.clj.fastble.callback.BleScanCallback
 import com.clj.fastble.data.BleDevice
 import com.clj.fastble.exception.BleException
 import com.clj.fastble.scan.BleScanRuleConfig
+import com.clj.fastble.utils.HexUtil
 import com.example.massor.adapter.DeviceAdapter
 import com.example.massor.comm.ObserverManager
 import com.example.massor.util.Utils
@@ -122,6 +123,9 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
                 if (!bleManager.isConnected(bleDevice)) {
                     bleManager.cancelScan()
                     connect(bleDevice!!)
+                    /*val intent = Intent(this@MainActivity,AdjustActivity::class.java)
+                    intent.putExtra(AdjustActivity.KEY_DATA, bleDevice)
+                    startActivity(intent)*/
                 }
             }
 

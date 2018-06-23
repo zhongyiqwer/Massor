@@ -1,5 +1,6 @@
 package com.example.massor.util
 
+import com.clj.fastble.utils.HexUtil
 import kotlin.experimental.xor
 
 /**
@@ -42,7 +43,7 @@ object Protocol {
     /*
      * 对发送数据进行组装
      */
-    fun getSendCmdByteArr(order:Int,dataMap:HashMap<String,Int>):ByteArray{
+    fun getSendCmdByteArr(order:Int, dataMap: HashMap<String, String>?):ByteArray{
         cmdIndex = 0
         //通信长度为64字节
         val byteArray = ByteArray(64)
@@ -68,33 +69,59 @@ object Protocol {
         array[63] = check
     }
 
-    private fun setCmdContent(array: ByteArray,order: Int,dataMap: HashMap<String, Int>) {
+    private fun setCmdContent(array: ByteArray,order: Int,dataMap: HashMap<String, String>?) {
         when(order){
             CMD_SET_FRAME ->{
                 //FrameParam
-                val frameIndex = dataMap["frameIndex"]!!.toByte()
+                //{25, 1, 0, 75, 20, 320, 80, 128, { 150, 2500,  75}, {  75,  75,  75,  75} }
+                val frameIndex = dataMap!!["frameIndex"]!!.toInt().toByte()
                 array[cmdIndex] = frameIndex
                 cmdIndex++
-
+                val framaParam = dataMap["frameParam"]
+                val split = framaParam!!.split(" ")
+                for (i in split.indices){
+                    if (i == 0 || i == 1 || i==2 || i==4 || i==7){
+                        array[cmdIndex] = split[i].toInt().toByte()
+                        cmdIndex++
+                    }else{
+                        val int2ByteArr2 = StringUtil.Int2ByteArr2(split[i].toInt())
+                        array[cmdIndex] = int2ByteArr2[0]
+                        cmdIndex++
+                        array[cmdIndex] = int2ByteArr2[1]
+                        cmdIndex++
+                    }
+                }
             }
             CMD_GET_FRAME ->{
-                val frameIndex = dataMap["frameIndex"]!!.toByte()
+                val frameIndex = dataMap!!["frameIndex"]!!.toInt().toByte()
                 array[cmdIndex] = frameIndex
                 cmdIndex++
             }
             CMD_DEL_FRAME ->{
-                val frameIndex = dataMap["frameIndex"]!!.toByte()
+                val frameIndex = dataMap!!["frameIndex"]!!.toInt().toByte()
                 array[cmdIndex] = frameIndex
                 cmdIndex++
             }
             CMD_SET_LOOP ->{
                 //LoopParam
+                //12 0 12 8  因为最后一个8是2字节，所以存在高低位问题
+                val loopParam = dataMap!!["loopParam"]
+                val split = loopParam!!.split(" ")
+                for (i in split.indices-1){
+                    array[cmdIndex] = split[i].toInt().toByte()
+                    cmdIndex++
+                }
+                val int2ByteArr2 = StringUtil.Int2ByteArr2(split.last().toInt())
+                array[cmdIndex] = int2ByteArr2[0]
+                cmdIndex++
+                array[cmdIndex] = int2ByteArr2[1]
+                cmdIndex++
             }
             CMD_GET_LOOP ->{
 
             }
             CMD_RUN_PULSE ->{
-
+                println("Contete = "+HexUtil.formatHexString(array))
             }
             CMD_STOP_PULSE ->{
 
@@ -106,7 +133,7 @@ object Protocol {
 
             }
             CMD_SET_PULSEPWR ->{
-                val pulsePWR = dataMap["pulsePWR"]!!.toByte()
+                val pulsePWR = dataMap!!["pulsePWR"]!!.toInt().toByte()
                 array[cmdIndex] = pulsePWR
                 cmdIndex++
             }
@@ -114,7 +141,6 @@ object Protocol {
 
             }
         }
-
         if (cmdIndex<63){
             while (cmdIndex<63){
                 array[cmdIndex] = 0x00
@@ -157,46 +183,62 @@ object Protocol {
     /*
      *对接收到的数据进行解析
      */
-    fun getReceiveCmdData(receiveByteArr:ByteArray){
+    fun getReceiveCmdData(receiveByteArr:ByteArray):String{
+        var content: String =""
         if (!checkReceive(receiveByteArr)){
             //数据校验没有通过
+            println("数据校验没有通过")
         }else{
-            getCmdOrderAndContent(receiveByteArr)
+            content = getCmdOrderAndContent(receiveByteArr)
         }
+        println("content="+content)
+        return content
     }
 
-    private fun getCmdOrderAndContent(receiveByteArr: ByteArray) {
+    private fun getCmdOrderAndContent(receiveByteArr: ByteArray) :String{
         val Cmd = receiveByteArr[10]
         var order :Int = 11
+        var content = StringBuilder()
         //成功
         for (i in CMD_Order_Receive.indices){
             if (Cmd == CMD_Order_Receive[i]){
                 order = i
+            }else if (Cmd == CMD_Order_Receive_Fail[i]){
+                println("操作 "+i+" 执行失败！")
             }
         }
-        //失败
-        /*for (i in CMD_Order_Receive_Fail.indices){
-            if (Cmd == CMD_Order_Receive_Fail[i]){
-                order = i
-            }
-        }*/
+        println("order="+order)
 
         when(order){
             CMD_SET_FRAME ->{
                 val frameIndex = receiveByteArr[11]
+                content.append("设置序号：")
+                content.append( frameIndex.toInt() and 0xFF)
             }
             CMD_GET_FRAME ->{
                 val frameIndex = receiveByteArr[11]
-                //FrameParam
+                println("frameIndex="+frameIndex.toString())
+                content.append("收到序号：")
+                content.append(frameIndex.toInt() and 0xFF)
+                content.append(" ")
+                //FrameParam 25字节
+                val param = phaseFrameParam(receiveByteArr)
+                content.append("FrameParam:")
+                content.append(param)
             }
             CMD_DEL_FRAME ->{
                 val frameIndex = receiveByteArr[11]
+                content.append("删除序号：")
+                content.append(frameIndex.toInt() and 0xFF)
             }
             CMD_SET_LOOP ->{
 
             }
             CMD_GET_LOOP ->{
                 //LoopParam
+                val loopParam = phaseLoopParam(receiveByteArr)
+                content.append("LoopParam：")
+                content.append(loopParam)
             }
             CMD_RUN_PULSE ->{
 
@@ -212,11 +254,60 @@ object Protocol {
             }
             CMD_SET_PULSEPWR ->{
                 val pulsePWR = receiveByteArr[11]
+                content.append("设置强度为：")
+                content.append(pulsePWR.toInt() and 0xFF)
             }
             CMD_GET_PULSEPWR ->{
                 val pulsePWR = receiveByteArr[11]
+                content.append("获取强度为：")
+                content.append(pulsePWR.toInt() and 0xFF)
             }
         }
+        return content.toString()
+    }
+
+    private fun phaseLoopParam(receiveByteArr: ByteArray):String {
+        var index = 12
+        val s = StringBuilder()
+        for (i in 0..13){
+            val toInt = receiveByteArr[index].toInt() and 0xFF
+            index++
+            s.append(toInt)
+            s.append(" ")
+        }
+        val by = ByteArray(2)
+        by[0] = receiveByteArr[index]
+        index++
+        by[1] = receiveByteArr[index]
+        index++
+        val arr22Int = StringUtil.ByteArr22Int(by)
+        s.append(arr22Int)
+        s.append(" ")
+
+        return s.toString()
+    }
+
+    private fun phaseFrameParam(receiveByteArr: ByteArray):String {
+        var index = 12
+        val s = StringBuilder()
+        for (i in 0..14){
+            if (i == 0 || i == 1 || i==2 || i==4 || i==7){
+                val toInt = receiveByteArr[index].toInt() and 0xFF
+                index++
+                s.append(toInt)
+                s.append(" ")
+            }else{
+                val by = ByteArray(2)
+                by[0] = receiveByteArr[index]
+                index++
+                by[1] = receiveByteArr[index]
+                index++
+                val arr22Int = StringUtil.ByteArr22Int(by)
+                s.append(arr22Int)
+                s.append(" ")
+            }
+        }
+        return s.toString()
     }
 
     private fun checkReceive(receiveByteArr: ByteArray):Boolean {

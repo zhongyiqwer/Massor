@@ -28,6 +28,7 @@
         </activity>
         <activity android:name=".MainActivity" />
         <activity android:name=".AdjustActivity"/>
+        <activity android:name=".AdjustActivity2"/>
     </application>
 
 </manifest>

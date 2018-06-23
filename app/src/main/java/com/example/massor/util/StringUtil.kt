@@ -1,5 +1,8 @@
 package com.example.massor.util
 
+import com.clj.fastble.utils.HexUtil
+import kotlin.experimental.and
+
 /**
  * Created by ZY on 2018/6/20.
  */
@@ -52,4 +55,18 @@ object StringUtil {
         return stringBuilder.toString()
     }
 
+    //把Int数取低2字节 如：320 为40 01
+    fun Int2ByteArr2(a:Int):ByteArray{
+        val byteArray = ByteArray(2)
+        byteArray[0] = (a and 0xFF).toByte()
+        byteArray[1] = (a shr 8 and 0xFF).toByte()
+        return byteArray
+    }
+
+    fun ByteArr22Int(byteArray: ByteArray):Int{
+        val low = byteArray[0].toInt()
+        val hig = byteArray[1].toInt()
+        val i1 = (hig shl 8 and 0xFF00) or (low and 0xFF)
+        return i1
+    }
 }

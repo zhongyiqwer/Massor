@@ -123,9 +123,6 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
                 if (!bleManager.isConnected(bleDevice)) {
                     bleManager.cancelScan()
                     connect(bleDevice!!)
-                    /*val intent = Intent(this@MainActivity,AdjustActivity::class.java)
-                    intent.putExtra(AdjustActivity.KEY_DATA, bleDevice)
-                    startActivity(intent)*/
                 }
             }
 
@@ -137,8 +134,8 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
 
             override fun onDetail(bleDevice: BleDevice?) {
                 if (bleManager.isConnected(bleDevice)) {
-                    val intent = Intent(this@MainActivity,AdjustActivity::class.java)
-                    intent.putExtra(AdjustActivity.KEY_DATA, bleDevice)
+                    val intent = Intent(this@MainActivity,AdjustActivity2::class.java)
+                    intent.putExtra(AdjustActivity2.KEY_DATA, bleDevice)
                     startActivity(intent)
                 }
             }
@@ -181,7 +178,7 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
         BleManager.getInstance()
                 .enableLog(true)
                 .setReConnectCount(1,5000)
-                .setSplitWriteNum(20)
+                .setSplitWriteNum(64)
                 .setConnectOverTime(10000)
                 .setOperateTimeout(5000)
     }

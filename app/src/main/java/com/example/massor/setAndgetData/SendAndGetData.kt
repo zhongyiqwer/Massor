@@ -1,17 +1,14 @@
-package com.example.massor
+package com.example.massor.setAndgetData
 
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
-import android.text.TextUtils
 import com.clj.fastble.BleManager
 import com.clj.fastble.callback.BleNotifyCallback
-import com.clj.fastble.callback.BleReadCallback
 import com.clj.fastble.callback.BleWriteCallback
 import com.clj.fastble.data.BleDevice
 import com.clj.fastble.exception.BleException
-import com.example.massor.util.Utils
-import kotlinx.android.synthetic.main.activity_adjust.*
-import kotlinx.android.synthetic.main.activity_adjust_contier.*
+import com.clj.fastble.utils.HexUtil
+import java.util.*
 
 /**
  * Created by ZY on 2018/6/21.
@@ -21,10 +18,14 @@ class SendAndGetData {
     lateinit var bleDevice: BleDevice
     lateinit var writeGattCharacteristic: BluetoothGattCharacteristic
     lateinit var readGattCharacteristic: BluetoothGattCharacteristic
+    lateinit var dataCallback: DataCallback
 
     val writeUUID = "0000ffe9-0000-1000-8000-00805f9b34fb"
     val readUUID = "0000ffe4-0000-1000-8000-00805f9b34fb"
 
+    fun setCallback(callback: DataCallback){
+        this.dataCallback = callback
+    }
 
     fun conn(bleDevice: BleDevice){
         this.bleDevice = bleDevice
@@ -139,7 +140,8 @@ class SendAndGetData {
                         override fun onWriteSuccess(current: Int, total: Int, justWrite: ByteArray?) {
                             println("write success, current: " + current
                                     + " total: " + total
-                                    + " justWrite: " + String(justWrite!!))
+                                    + " justWrite: " + HexUtil.formatHexString(justWrite))
+                            dataCallback.writeCallback(justWrite)
                         }
 
                         override fun onWriteFailure(p0: BleException?) {
@@ -156,8 +158,10 @@ class SendAndGetData {
                 bleDevice, readGattCharacteristic.service.uuid.toString(),
                 readGattCharacteristic.uuid.toString(),
                 object : BleNotifyCallback() {
-                    override fun onCharacteristicChanged(p0: ByteArray?) {
-                        println("write success: " + String(p0!!))
+                    override fun onCharacteristicChanged(notify: ByteArray?) {
+                        //一次通知结束符 0d0a
+                        println("notify success: " + HexUtil.formatHexString(notify))
+                        dataCallback.notifyCallback(notify)
                     }
 
                     override fun onNotifyFailure(p0: BleException?) {
